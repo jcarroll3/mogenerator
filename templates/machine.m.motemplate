@@ -3,17 +3,29 @@
 
 #import "_<$managedObjectClassName$>.h"
 
+<$if noninheritedAttributes.@count > 0$>
 const struct <$managedObjectClassName$>Attributes <$managedObjectClassName$>Attributes = {<$foreach Attribute noninheritedAttributes do$>
 	.<$Attribute.name$> = @"<$Attribute.name$>",<$endforeach do$>
 };
+<$endif$>
 
+<$if noninheritedRelationships.@count > 0$>
 const struct <$managedObjectClassName$>Relationships <$managedObjectClassName$>Relationships = {<$foreach Relationship noninheritedRelationships do$>
 	.<$Relationship.name$> = @"<$Relationship.name$>",<$endforeach do$>
 };
+<$endif$>
 
+<$if noninheritedFetchedProperties.@count > 0$>
 const struct <$managedObjectClassName$>FetchedProperties <$managedObjectClassName$>FetchedProperties = {<$foreach FetchedProperty noninheritedFetchedProperties do$>
 	.<$FetchedProperty.name$> = @"<$FetchedProperty.name$>",<$endforeach do$>
 };
+<$endif$>
+
+<$if hasUserInfoKeys$>
+const struct <$managedObjectClassName$>UserInfo <$managedObjectClassName$>UserInfo = {<$foreach UserInfo userInfoKeyValues do$>
+	.<$UserInfo.key$> = @"<$UserInfo.value$>",<$endforeach do$>
+};
+<$endif$>
 
 @implementation <$managedObjectClassName$>ID
 @end
@@ -62,9 +74,11 @@ const struct <$managedObjectClassName$>FetchedProperties <$managedObjectClassNam
 	return [result <$Attribute.scalarAccessorMethodName$>];
 }
 
+<$if ! Attribute.isReadonly$>
 - (void)set<$Attribute.name.initialCapitalString$>Value:(<$Attribute.scalarAttributeType$>)value_ {
-	[self set<$Attribute.name.initialCapitalString$>:[NSNumber <$Attribute.scalarFactoryMethodName$>value_]];
+	[self set<$Attribute.name.initialCapitalString$>:<$if TemplateVar.noliterals$>[NSNumber <$Attribute.scalarFactoryMethodName$>value_]<$else$>@(value_)<$endif$>];
 }
+<$endif$>
 
 - (<$Attribute.scalarAttributeType$>)primitive<$Attribute.name.initialCapitalString$>Value {
 	NSNumber *result = [self primitive<$Attribute.name.initialCapitalString$>];
@@ -72,7 +86,7 @@ const struct <$managedObjectClassName$>FetchedProperties <$managedObjectClassNam
 }
 
 - (void)setPrimitive<$Attribute.name.initialCapitalString$>Value:(<$Attribute.scalarAttributeType$>)value_ {
-	[self setPrimitive<$Attribute.name.initialCapitalString$>:[NSNumber <$Attribute.scalarFactoryMethodName$>value_]];
+	[self setPrimitive<$Attribute.name.initialCapitalString$>:<$if TemplateVar.noliterals$>[NSNumber <$Attribute.scalarFactoryMethodName$>value_]<$else$>@(value_)<$endif$>];
 }
 <$endif$>
 <$endif$>
@@ -105,10 +119,10 @@ const struct <$managedObjectClassName$>FetchedProperties <$managedObjectClassNam
 	NSError *error = nil;
 	id result = [self fetch<$FetchRequest.name.initialCapitalString$>:moc_ <$foreach Binding FetchRequest.bindings do2$><$Binding.name$>:<$Binding.name$>_ <$endforeach do2$>error:&error];
 	if (error) {
-#if TARGET_OS_IPHONE
-		NSLog(@"error: %@", error);
-#else
+#ifdef NSAppKitVersionNumber10_0
 		[NSApp presentError:error];
+#else
+		NSLog(@"error: %@", error);
 #endif
 	}
 	return result;
@@ -143,8 +157,8 @@ const struct <$managedObjectClassName$>FetchedProperties <$managedObjectClassNam
 				result = [results objectAtIndex:0];
 				break;
 			default:
-				NSLog(@"WARN fetch request <$FetchRequest.name$>: 0 or 1 objects expected, %u found (substitutionVariables:%@, results:%@)",
-					[results count],
+				NSLog(@"WARN fetch request <$FetchRequest.name$>: 0 or 1 objects expected, %lu found (substitutionVariables:%@, results:%@)",
+					(unsigned long)[results count],
 					substitutionVariables,
 					results);
 		}
@@ -158,10 +172,10 @@ const struct <$managedObjectClassName$>FetchedProperties <$managedObjectClassNam
 	NSError *error = nil;
 	NSArray *result = [self fetch<$FetchRequest.name.initialCapitalString$>:moc_ <$foreach Binding FetchRequest.bindings do2$><$Binding.name$>:<$Binding.name$>_ <$endforeach do2$>error:&error];
 	if (error) {
-#if TARGET_OS_IPHONE
-		NSLog(@"error: %@", error);
-#else
+#ifdef NSAppKitVersionNumber10_0
 		[NSApp presentError:error];
+#else
+		NSLog(@"error: %@", error);
 #endif
 	}
 	return result;
@@ -214,3 +228,22 @@ const struct <$managedObjectClassName$>FetchedProperties <$managedObjectClassNam
 #endif
 <$endif$>
 @end
+
+<$foreach Relationship noninheritedRelationships do$><$if Relationship.isToMany$><$if Relationship.jr_isOrdered$>
+@implementation _<$managedObjectClassName$> (<$Relationship.name.initialCapitalString$>CoreDataGeneratedAccessors)
+- (void)add<$Relationship.name.initialCapitalString$>:(<$Relationship.immutableCollectionClassName$>*)value_ {
+	[self.<$Relationship.name$>Set unionOrderedSet:value_];
+}
+- (void)remove<$Relationship.name.initialCapitalString$>:(<$Relationship.immutableCollectionClassName$>*)value_ {
+	[self.<$Relationship.name$>Set minusOrderedSet:value_];
+}
+- (void)add<$Relationship.name.initialCapitalString$>Object:(<$Relationship.destinationEntity.managedObjectClassName$>*)value_ {
+	[self.<$Relationship.name$>Set addObject:value_];
+}
+- (void)remove<$Relationship.name.initialCapitalString$>Object:(<$Relationship.destinationEntity.managedObjectClassName$>*)value_ {
+	[self.<$Relationship.name$>Set removeObject:value_];
+}
+@end
+<$endif$><$endif$><$endforeach do$>
+
+
